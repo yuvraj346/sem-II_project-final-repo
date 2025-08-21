@@ -3,6 +3,9 @@ import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * HomePageSwing.java
@@ -23,6 +26,11 @@ public final class HomePageSwing {
     private static final Color BG_LIGHT = new Color(248, 250, 252);
     private static final Color BG_DARKER = new Color(240, 242, 245);
     private static final Color SHADOW = new Color(0, 0, 0, 30);
+
+    // Database credentials (replace with your actual credentials)
+    private static final String DB_URL = "jdbc:mysql://localhost:3306/events";
+    private static final String DB_USER = "root";
+    private static final String DB_PASSWORD = "";
 
     /**
      * Entry point to show the home page UI.
@@ -101,7 +109,7 @@ public final class HomePageSwing {
         greetingPanel.setBorder(new EmptyBorder(40, 60, 40, 60));
         greetingPanel.setMaximumSize(new Dimension(Short.MAX_VALUE, 200));
 
-        JLabel greeting = new JLabel("<html><center><h1>🚀 Welcome to LJ University!</h1><br>" +
+        JLabel greeting = new JLabel("<html><center><h1> Welcome to LJ University!</h1><br>" +
                 "<h2>Your academic journey starts here</h2><br>" +
                 "Explore our comprehensive student services and make the most of your university experience</center></html>");
         greeting.setFont(new Font("Segoe UI", Font.BOLD, 24));
@@ -131,11 +139,20 @@ public final class HomePageSwing {
         shoutoutPanel.setBorder(new EmptyBorder(25, 35, 25, 35));
         shoutoutPanel.setMaximumSize(new Dimension(Short.MAX_VALUE, 140));
 
-        JLabel shoutoutTitle = new JLabel("🏆 Recent Winners & Achievements");
+        JLabel shoutoutTitle = new JLabel(" Recent Winners & Achievements");
         shoutoutTitle.setFont(new Font("Segoe UI", Font.BOLD, 20));
         shoutoutTitle.setForeground(BLUE_DARK);
 
-        JLabel shoutoutContent = new JLabel("🎮 Gaming Champions: Team Phoenix | 📚 Academic Excellence: Sarah Johnson | 🏅 Sports Champions: Basketball Team Alpha");
+        // Fetch and display recent winners
+        List<String> winners = getRecentWinners(3); // Get top 3 winners
+        String winnersText;
+        if (winners.isEmpty()) {
+            winnersText = "No recent achievements to display.";
+        } else {
+            winnersText = String.join(" | ", winners.stream().map(name -> " " + name).toArray(String[]::new));
+        }
+
+        JLabel shoutoutContent = new JLabel(winnersText);
         shoutoutContent.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         shoutoutContent.setForeground(new Color(100, 100, 100));
 
@@ -188,7 +205,7 @@ public final class HomePageSwing {
         footer.setOpaque(false);
         footer.setBorder(new EmptyBorder(15, 30, 15, 30));
 
-        JLabel contact = new JLabel("📧 Contact: support@ljuniversity.in | 📞 Phone: +91-XXXXXXXXXX");
+        JLabel contact = new JLabel(" Contact: support@ljuniversity.in |  Phone: +91-XXXXXXXXXX");
         contact.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         contact.setForeground(WHITE);
 
@@ -202,6 +219,34 @@ public final class HomePageSwing {
 
         frame.setVisible(true);
     }
+
+    /**
+     * Fetches recent winners from the database by calling the stored procedure.
+     * @param limit The number of winners to fetch.
+     * @return A list of winner names.
+     */
+    private static List<String> getRecentWinners(int limit) {
+        List<String> winners = new ArrayList<>();
+        String sql = "{CALL get_recent_winners(?)}";
+
+        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             CallableStatement stmt = conn.prepareCall(sql)) {
+
+            stmt.setInt(1, limit);
+            ResultSet rs = stmt.executeQuery();
+
+            while (rs.next()) {
+                winners.add(rs.getString("name"));
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            // In a real application, you'd want to handle this more gracefully
+            // For now, we'll return an empty list on error and print the stack trace.
+        }
+        return winners;
+    }
+
 
     /**
      * Creates a feature button for the options grid.
@@ -264,7 +309,7 @@ public final class HomePageSwing {
                     parentFrame.setVisible(false);
                     new FacultyFeedback().setVisible(true);
                     break;
-                case "Academic Resources":
+                                case "Academic Resources":
                     parentFrame.dispose();
                     new AcademicResourcesUI().setVisible(true);
                     break;
